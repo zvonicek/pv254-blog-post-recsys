@@ -1,16 +1,28 @@
 import csv
 import math
 import random
+import threading
 
 
 LAMBDA8 = 100
 ITEM_BASELINE_RATING = 0.5
+NUM_THREADS = 4
 
+
+class FuncThread(threading.Thread):
+    def __init__(self, target, args):
+        self._target = target
+        self._args = args
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self._target(self._args)
 
 class CFEngine:
     def __init__(self):
         super().__init__()
         self._item_ids = set()
+        self._item_ids_list = []
         self._similarity = {}
         self._user_rating = {}
         self._correlation = {}
@@ -73,6 +85,24 @@ class CFEngine:
         self._user_rating[user_id][item_id1] = rating
         return rating
 
+    def compute(self, thread_index):
+        num_items = len(self._item_ids)
+
+        start_index = thread_index * math.floor(num_items / NUM_THREADS)
+        end_index = min( num_items, (thread_index + 1) * math.floor(num_items / NUM_THREADS))
+
+        print("thread %d computing items from index %d to index %d" % (thread_index, start_index, end_index))
+        for item_index1 in range(start_index, end_index):
+            if item_index1 % 10 == 0:
+                print("thread %d , current progress %d%%" % (thread_index, 100 * ((item_index1 - start_index) / (end_index - start_index))))
+
+            for item_index2 in range(item_index1 + 1, num_items):
+                item_id1 =  self._item_ids_list[item_index1]
+                item_id2 =  self._item_ids_list[item_index2]
+
+                self.correlation(item_id1, item_id2)
+                self.similarity(item_id1, item_id2)
+
     def run(self, item_likes):
         for rating in item_likes:
             item_id = rating["item_id"]
@@ -91,18 +121,16 @@ class CFEngine:
 
         print("total items %d" % num_items)
 
-        item_ids_list = list(self._item_ids)
+        self._item_ids_list = list(self._item_ids)
 
-        for item_index1 in range(0, num_items):
-            if item_index1 % 100 == 0:
-                print("%d / %d" % (item_index1, num_items))
+        threads = []
+        for i in range(0, NUM_THREADS):
+            t = threading.Thread(target=self.compute, args=(i,))
+            t.start()
+            threads.append(t)
 
-            for item_index2 in range(item_index1 + 1, num_items):
-                item_id1 = item_ids_list[item_index1]
-                item_id2 = item_ids_list[item_index2]
-
-                self.correlation(item_id1, item_id2)
-                self.similarity(item_id1, item_id2)
+        for t in threads:
+            t.join()
 
 
 with open('blog-post-likes.csv', 'r') as likes:
@@ -112,7 +140,8 @@ with open('blog-post-likes.csv', 'r') as likes:
     for row in like_rows:
         item_likes.append({"item_id": int(row[0]), "user_id": int(row[1])})
 
-    item_likes = item_likes[:500]
+    print("total likes: %d" % len(item_likes))
+    item_likes = item_likes[:5000]
 
     engine = CFEngine()
     engine.run(item_likes)
