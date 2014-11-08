@@ -15,7 +15,6 @@ fn main() {
     let mut rdr = csv::Reader::from_file(fp);
     let mut data: HashMap<uint, HashSet<uint>> = HashMap::new();
     let mut need_ratings: HashSet<uint> = HashSet::new();
-    let mut similarity: HashMap<uint, HashMap<uint, f32>> = HashMap::new();
     let mut predictions: TreeMap<uint, uint> = TreeMap::new();
 
     let mut i = 0i;
@@ -50,11 +49,6 @@ fn main() {
             let f_both = set_a.intersection(set_b).count() as f32;
 
             let s = f_both / (f_a * f_b);
-
-            match similarity.entry(*i) {
-                Vacant(entry) => entry.set(HashMap::new()),
-                Occupied(entry) => entry.into_mut(),
-            }.insert(*j, s);
 
             prediction += s;
         }
