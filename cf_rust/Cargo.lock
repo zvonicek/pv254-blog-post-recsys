@@ -1,0 +1,12 @@
+[root]
+name = "recsys"
+version = "0.0.1"
+dependencies = [
+ "rust-csv 0.5.1 (git+git://github.com/BurntSushi/rust-csv)",
+]
+
+[[package]]
+name = "rust-csv"
+version = "0.5.1"
+source = "git+git://github.com/BurntSushi/rust-csv#fe382eeb78e7542effe6daf5576b1aeb6fd9dde6"
+

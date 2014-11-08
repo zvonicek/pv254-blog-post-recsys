@@ -1,0 +1,8 @@
+[package]
+
+name = "recsys"
+version = "0.0.1"
+authors = ["hrach <hrach.cz@gmail.com>"]
+
+[dependencies.rust-csv]
+git = "git://github.com/BurntSushi/rust-csv"
