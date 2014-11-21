@@ -8,6 +8,7 @@ import math
 import random
 import heapq
 from operator import itemgetter, attrgetter
+import czech_stemmer
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -44,8 +45,11 @@ class TfIdf:
         self.tf[id] = {}
 
         for t in tokens:
-            if len(t) < 2 or t in self.stopwords:
+            t = t.lower()
+            # skip short words or stopwords
+            if len(t) < 3 or t in self.stopwords:
                 continue
+            t = czech_stemmer.cz_stem(t)
 
             self.tf[id][t] = self.tf[id].get(t, 0.0) + 1.0
             if self.tf[id][t] == 1.0:
