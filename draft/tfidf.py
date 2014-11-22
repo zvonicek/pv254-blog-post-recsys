@@ -34,8 +34,13 @@ class TfIdf:
         self.corpus = {}
         self.tf = {}
         self.idf = {}
-        self.tfidf = {}
         self.stopwords = set(open("../data/stopwords.txt").read().splitlines())
+        #self.tfidf = {}
+
+        self.posts = []
+        self.posts_tfidf = []
+
+        #self.tfidf = Manager().dict()
 
     def add_post(self, post):
         id = int(post[0])
@@ -62,27 +67,37 @@ class TfIdf:
         print "calculating TF-IDF..."
 
         for id in self.tf:
-            self.idf[id] = {}
-            self.tfidf[id] = {}
+            self.posts.append(id)
 
+            posts_tfidf = {}
             for t in self.tf[id]:
-                self.idf[id][t] = math.log(len(self.tf) / float(self.corpus[t])) + 1
-                self.tfidf[id][t] = self.tf[id][t] * self.idf[id][t]
+                idf = math.log(len(self.tf) / float(self.corpus[t])) + 1
+
+                posts_tfidf[t] = self.tf[id][t] * idf
+
+            self.posts_tfidf.append(posts_tfidf)
 
         print "calculating TF-IDF done"
 
-    def cosine_similarity(self, item_id):
+    def cosine_similarity(self, item_idx):
         similarities = {}
 
-        for other_id in self.tfidf:
+        for other_idx, other_id in enumerate(self.posts):
             similarities[other_id] = 0
             norm_item_squared = 0
             norm_other_squared = 0
 
-            for t in self.tfidf[item_id]:
-                similarities[other_id] += self.tfidf[item_id][t] * self.tfidf[other_id].get(t, 0.0)
-                norm_item_squared += math.pow(self.tfidf[item_id][t], 2)
-                norm_other_squared += math.pow(self.tfidf[other_id].get(t, 0.0), 2)
+            for t, tfidf in self.posts_tfidf[item_idx].iteritems():
+                if (self.posts_tfidf[other_idx].has_key(t)):
+                    other_tfidf = self.posts_tfidf[other_idx][t]
+                else:
+                    other_tfidf = 0
+
+                #other_tfidf = self.posts_tfidf[other_idx].get(t, 0.0)
+
+                similarities[other_id] += self.posts_tfidf[item_idx][t] * other_tfidf
+                norm_item_squared += self.posts_tfidf[item_idx][t] ** 2
+                norm_other_squared += other_tfidf ** 2
 
             norm = (math.sqrt(norm_item_squared) * math.sqrt(norm_other_squared))
             if norm != 0:
