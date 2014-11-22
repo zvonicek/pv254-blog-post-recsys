@@ -9,11 +9,13 @@ import random
 import heapq
 from operator import itemgetter, attrgetter
 import czech_stemmer
+import time
+from multiprocessing import Process, Manager
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-# helper functions to load input in utf-8
+# helper functions
 
 def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
     csv_reader = csv.reader(utf_8_encoder(unicode_csv_data),
@@ -25,6 +27,18 @@ def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
 def utf_8_encoder(unicode_csv_data):
     for line in unicode_csv_data:
         yield line.encode('utf-8')
+
+
+def chunkIt(seq, num):
+    avg = len(seq) / float(num)
+    out = []
+    last = 0.0
+
+    while last < len(seq):
+        out.append(seq[int(last):int(last + avg)])
+        last += avg
+
+    return out
 
 
 class TfIdf:
@@ -105,9 +119,35 @@ class TfIdf:
 
         return similarities
 
+    def print_similar(self, ids):
+        for i in ids:
+            similarities = cb.cosine_similarity(i)
+            top = heapq.nlargest(5, similarities.iteritems(), key=itemgetter(1))
+
+            print("Most similar items for item %s: %s" % (self.posts[i], top))
+        print("time", time.time() - start_time)
+
+    def write_similar(self, ids):
+        with open("out_" + str(ids[0]) + ".txt", "wb") as file:
+            writer = csv.writer(file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            for i in ids:
+                similarities = cb.cosine_similarity(i)
+                top = heapq.nlargest(6, similarities.iteritems(), key=itemgetter(1))
+                flattenTop = [element for tupl in top for element in tupl]
+                writer.writerow([self.posts[i]] + flattenTop)
+                file.flush()
+        print("time", time.time() - start_time)
+
+
+def compute_similarity(cb, keys, threads_count):
+    chunks = chunkIt(keys, threads_count)
+    for chunk in chunks:
+        t = Process(target=cb.write_similar, args=(chunk,))
+        t.start()
+
 cb = TfIdf()
 
-with open('blog-posts.csv', 'rb') as postfile:
+with open('../data/blog-posts.csv', 'rb') as postfile:
     postreader = unicode_csv_reader(postfile)
     first = True
 
@@ -117,6 +157,7 @@ with open('blog-posts.csv', 'rb') as postfile:
 
     count = 0
     for row in postreader:
+
         if first:
             first = False
         else:
@@ -128,14 +169,12 @@ with open('blog-posts.csv', 'rb') as postfile:
 
     print "adding posts done"
 
-
-# testing - calculate tf-idf and find similarity
-
 cb.calculate_tfidf()
+cb.corpus = {}
+cb.tf = {}
+cb.idf = {}
+cb.stopwords = {}
 
-for i in range(0, 100):
-    item_id = cb.tf.keys()[random.randint(0, len(cb.tf) - 1)]
-    similarities = cb.cosine_similarity(item_id)
-    top = heapq.nlargest(5, similarities.iteritems(), key=itemgetter(1))
+start_time = time.time()
 
-    print("Most similar items for item %s: %s" % (item_id, top))
+compute_similarity(cb, range(0,len(cb.posts)), 6)
