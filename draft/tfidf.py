@@ -49,12 +49,8 @@ class TfIdf:
         self.tf = {}
         self.idf = {}
         self.stopwords = set(open("../data/stopwords.txt").read().splitlines())
-        #self.tfidf = {}
-
         self.posts = []
         self.posts_tfidf = []
-
-        #self.tfidf = Manager().dict()
 
     def add_post(self, post):
         id = int(post[0])
@@ -106,8 +102,6 @@ class TfIdf:
                     other_tfidf = self.posts_tfidf[other_idx][t]
                 else:
                     other_tfidf = 0
-
-                #other_tfidf = self.posts_tfidf[other_idx].get(t, 0.0)
 
                 similarities[other_id] += self.posts_tfidf[item_idx][t] * other_tfidf
                 norm_item_squared += self.posts_tfidf[item_idx][t] ** 2
@@ -177,4 +171,4 @@ cb.stopwords = {}
 
 start_time = time.time()
 
-compute_similarity(cb, range(0,len(cb.posts)), 6)
+compute_similarity(cb, range(0,len(cb.posts)), 20)
