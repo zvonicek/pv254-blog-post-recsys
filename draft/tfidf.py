@@ -139,28 +139,29 @@ class TfIdf:
             t.start()
 
 
-cb = TfIdf()
+if __name__ == "__main__":
+    cb = TfIdf()
 
-with open('../data/blog-posts.csv', 'rb') as postfile:
-    postreader = unicode_csv_reader(postfile)
-    first = True
+    with open('../data/blog-posts.csv', 'rb') as postfile:
+        postreader = unicode_csv_reader(postfile)
+        first = True
 
-    row_count = sum(1 for row in csv.reader(postfile))
-    print "adding posts, count:", row_count, "..."
-    postfile.seek(0)
+        row_count = sum(1 for row in csv.reader(postfile))
+        print "adding posts, count:", row_count, "..."
+        postfile.seek(0)
 
-    count = 0
-    for row in postreader:
-        if first:
-            first = False
-        else:
-            cb.add_post(row)
+        count = 0
+        for row in postreader:
+            if first:
+                first = False
+            else:
+                cb.add_post(row)
 
-        if count % 1000 == 0:
-            print "progress: ", float(count) / row_count * 100, " %"
-        count += 1
+            if count % 1000 == 0:
+                print "progress: ", float(count) / row_count * 100, " %"
+            count += 1
 
-    print "adding posts done"
+        print "adding posts done"
 
-cb.calculate_tfidf()
-cb.compute_similarity(range(0,len(cb.posts)), 20)
+    cb.calculate_tfidf()
+    cb.compute_similarity(range(0,len(cb.posts)), 20)
