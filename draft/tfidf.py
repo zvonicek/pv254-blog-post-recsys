@@ -3,17 +3,19 @@
 import sys
 import csv
 import re
-from nltk.tokenize import RegexpTokenizer
 import math
-import random
 import heapq
-from operator import itemgetter, attrgetter
+import operator
+import multiprocessing
+
+import nltk.tokenize
+
 import czech_stemmer
-import time
-from multiprocessing import Process, Manager
+
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
+csv.field_size_limit(sys.maxsize)
 
 # helper functions
 
@@ -29,7 +31,7 @@ def utf_8_encoder(unicode_csv_data):
         yield line.encode('utf-8')
 
 
-def chunkIt(seq, num):
+def chunk_it(seq, num):
     avg = len(seq) / float(num)
     out = []
     last = 0.0
@@ -42,7 +44,7 @@ def chunkIt(seq, num):
 
 
 class TfIdf:
-    tokenizer = RegexpTokenizer("[\w’]+", flags=re.UNICODE)
+    tokenizer = nltk.tokenize.RegexpTokenizer("[\w’]+", flags=re.UNICODE)
 
     def __init__(self):
         self.corpus = {}
@@ -87,7 +89,7 @@ class TfIdf:
 
             self.posts_tfidf.append(posts_tfidf)
 
-        print "calculating TF-IDF done"
+        print "calculating TF-IDF: done"
 
     def cosine_similarity(self, item_idx):
         similarities = {}
@@ -98,7 +100,7 @@ class TfIdf:
             norm_other_squared = 0
 
             for t, tfidf in self.posts_tfidf[item_idx].iteritems():
-                if (self.posts_tfidf[other_idx].has_key(t)):
+                if self.posts_tfidf[other_idx].has_key(t):
                     other_tfidf = self.posts_tfidf[other_idx][t]
                 else:
                     other_tfidf = 0
@@ -116,28 +118,26 @@ class TfIdf:
     def print_similar(self, ids):
         for i in ids:
             similarities = cb.cosine_similarity(i)
-            top = heapq.nlargest(5, similarities.iteritems(), key=itemgetter(1))
+            top = heapq.nlargest(5, similarities.iteritems(), key=operator.itemgetter(1))
 
             print("Most similar items for item %s: %s" % (self.posts[i], top))
-        print("time", time.time() - start_time)
 
     def write_similar(self, ids):
         with open("out_" + str(ids[0]) + ".txt", "wb") as file:
             writer = csv.writer(file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for i in ids:
                 similarities = cb.cosine_similarity(i)
-                top = heapq.nlargest(6, similarities.iteritems(), key=itemgetter(1))
-                flattenTop = [element for tupl in top for element in tupl]
-                writer.writerow([self.posts[i]] + flattenTop)
+                top = heapq.nlargest(6, similarities.iteritems(), key=operator.itemgetter(1))
+                flatten_top = [element for tupl in top for element in tupl]
+                writer.writerow([self.posts[i]] + flatten_top)
                 file.flush()
-        print("time", time.time() - start_time)
 
+    def compute_similarity(self, keys, threads_count):
+        chunks = chunk_it(keys, threads_count)
+        for chunk in chunks:
+            t = multiprocessing.Process(target=self.write_similar, args=(chunk,))
+            t.start()
 
-def compute_similarity(cb, keys, threads_count):
-    chunks = chunkIt(keys, threads_count)
-    for chunk in chunks:
-        t = Process(target=cb.write_similar, args=(chunk,))
-        t.start()
 
 cb = TfIdf()
 
@@ -151,7 +151,6 @@ with open('../data/blog-posts.csv', 'rb') as postfile:
 
     count = 0
     for row in postreader:
-
         if first:
             first = False
         else:
@@ -164,11 +163,4 @@ with open('../data/blog-posts.csv', 'rb') as postfile:
     print "adding posts done"
 
 cb.calculate_tfidf()
-cb.corpus = {}
-cb.tf = {}
-cb.idf = {}
-cb.stopwords = {}
-
-start_time = time.time()
-
-compute_similarity(cb, range(0,len(cb.posts)), 20)
+cb.compute_similarity(range(0,len(cb.posts)), 20)
