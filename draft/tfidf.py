@@ -132,7 +132,7 @@ class TfIdf:
                 writer.writerow([self.posts[i]] + flatten_top)
                 file.flush()
 
-    def compute_similarity(self, keys, threads_count):
+    def compute_similarity_parallel(self, keys, threads_count):
         chunks = chunk_it(keys, threads_count)
         for chunk in chunks:
             t = multiprocessing.Process(target=self.write_similar, args=(chunk,))
@@ -164,4 +164,4 @@ if __name__ == "__main__":
         print "adding posts done"
 
     cb.calculate_tfidf()
-    cb.compute_similarity(range(0,len(cb.posts)), 20)
+    cb.compute_similarity_parallel(range(0,len(cb.posts)), 20)
